@@ -1,0 +1,83 @@
+# GoalsPer60 -> Scorer Categories
+def goals_category(GoalsP6):
+    if GoalsP6 == 0 :
+        return 'No Goals'
+    elif GoalsP6 < .3:
+        return 'Low Scorer'
+    elif GoalsP6 < .7:
+        return 'Average Scorer'
+    else:
+        return 'High Scorer'
+
+
+
+# Hits -> Aggression
+df['Aggression'] = 0
+
+for index in range(len(df)):
+    if df['HitsPer60'].iloc[index] < 2:
+       df['Aggression'].iloc[index] = 1
+    elif df['HitsPer60'].iloc[index] < 5:
+            df['Aggression'].iloc[index] = 2
+    else: 
+         df['Aggression'].iloc[index] = 4
+    
+df['GoalsCategory'] = df['GoalsPer60'].apply(goals_category)
+df['GoalsCategory'].value_counts(normalize=True)
+
+
+
+# Visualizing correlation in data, colors indicate scorer type (high, avg, low, none)
+import seaborn as sns
+g = sns.pairplot(
+    df,
+    x_vars=['A', 'HIT', 'Age', 'FO%'],
+    y_vars=['GoalsPer60'], hue="GoalsCategory",height=5,
+)
+
+b = g.map(sns.scatterplot)
+g.add_legend()
+
+
+
+# Random Forest Model scorer type categories
+import warnings
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import svm
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+from sklearn.preprocessing import MinMaxScaler
+
+warnings.filterwarnings("ignore")
+
+
+clf_random = RandomForestClassifier()
+
+
+variables = df[['A', 'Aggression', 'AgeCategorical', 'FO%', 'PosBinary']]
+norm = MinMaxScaler()
+norm_var = norm.fit_transform(variables)
+X = pd.DataFrame(norm_var)
+y = df['GoalsCategory'] 
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30)
+
+random_forest_list = []
+
+for i in range(1000):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30)
+    
+    clf_random.fit(X_train,y_train)
+    
+    rdf = clf_random.predict(X_test)
+    acc_random = accuracy_score(y_test,rdf)
+    random_forest_list.append(acc_random)
+    
+print("Random Forest Accuracy:", np.array(random_forest_list).mean(),np.array(random_forest_list).std())
+
